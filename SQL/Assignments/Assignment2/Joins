@@ -1,0 +1,168 @@
+--The below code is to join 12 tables extracted from one big dataset which was having 12 different sheets inside one big xlsx file and joining these tables and using
+--them to create a MASTER TABLE as per the client requirement. I've used snowflake (cloud) as an sql editor and everything.
+
+use warehouse PRACTWAREHOUSE1;
+use database VB_DEMODATABASE1;
+
+create or replace table VB_brokers(
+
+  BROKER_ID int not null PRIMARY KEY ,
+  BROKER_CODE varchar,
+  BROKER_FULLNAME varchar(40),
+  DISTRIBUTION_NETWORK varchar(15),
+  DISTRIBUTION_CHANNEL varchar(15),
+  COMMISSION_SCEHEME varchar(15)
+
+);
+select distinct * from VB_brokers; --707
+
+create or replace table VB_categories(
+
+    ID int not null PRIMARY KEY,
+    DESCRIPTION_CATEGORIES varchar(),
+    ACTIVE int
+  
+);
+select distinct * from VB_categories; --56
+
+create or replace table VB_complaints_data(
+
+  ID int not null PRIMARY KEY,
+  COMPLAIN_DATE date,
+  COMPLETION_DATE varchar,
+  CUSTOMER_ID int,
+  BROKER_ID int,
+  PRODUCT_ID int,
+  COMPLAIN_PRIORITY_ID int,
+  COMPLAIN_TYPE_ID int,
+  COMPLAIN_SOURCE_ID int,
+  COMPLAIN_CATEGORY_ID int,
+  COMPLAIN_STATUS_ID int,
+  ADMINISTRATOR_ID varchar,
+  CLIENT_SATISFACTION varchar(5),
+  EXPECTED_REIMBURSEMENT number 
+
+);
+select distinct * from VB_complaints_data; --13846
+
+create or replace table VB_customers(
+
+  CUSTOMER_ID int not null PRIMARY KEY,
+  LAST_NAME varchar(),
+  FIRST_NAME varchar(),
+  BIRTH_DATE date,
+  GENDER varchar,
+  PARTICIPANT_TYPE varchar,
+  REGION_ID int,
+  MARITAL_STATUS varchar
+);
+select distinct * from VB_customers; --12305
+
+create or replace table VB_priorities(
+
+  ID int not null PRIMARY KEY,
+  DESCRIPTION_PRORITY varchar
+
+);
+select distinct * from VB_priorities; --2
+
+create or replace table VB_products(
+
+  PRODUCT_ID int not null PRIMARY KEY,
+  PRODUCT_CATEGORY varchar(),
+  PRODUCT_SUBCATEGORY varchar(),
+  PRODUCT varchar()
+);
+select distinct * from VB_products; --77
+
+create or replace table VB_regions(
+
+  id INT,
+  name	VARCHAR(50) ,
+  county	VARCHAR(100),
+  state_code	CHAR(5),
+  state	VARCHAR (60),
+  type	VARCHAR(50),
+  latitude	NUMBER(11,4),
+  longitude	NUMBER(11,4),
+  area_code	INT,
+  population	INT,
+  Households	INT,
+  median_income	INT,
+  land_area	INT,
+  water_area	INT,
+  time_zone VARCHAR(70)
+
+);
+select distinct * from VB_regions; --994
+
+create or replace table VB_sources(
+
+  ID	INT,
+  Description_Source VARCHAR(20)
+
+);
+select distinct * from VB_sources; --9
+
+create or replace table VB_State_Regions(
+
+  State_Code VARCHAR(20),	
+  State	 VARCHAR(20),
+  Region VARCHAR(20)
+
+);
+select distinct * from VB_State_Regions; --48
+
+create or replace table VB_Status_Type_History(
+
+   ID INT,
+   ComplaintID	INT not null references VB_consumerdata,
+   ComplaintStatusID INT	,
+   StatusDate VARCHAR(10)
+
+);
+select distinct * from VB_Status_Type_History; --11558
+
+create or replace table VB_statuses(
+
+  ID int,
+  Description_status varchar(40)
+
+);
+select distinct * from VB_statuses; --7
+
+create or replace table VB_types(
+
+  ID int,
+  Description_type varchar(20)
+
+);
+select distinct * from VB_types; --10
+
+
+--Now we go and try to join the tables, here as there are lot of tables and we do not want any data loss so we are
+-- going to use left outer join so that we're joining tables with respect to our left table's data. We're selecting the
+-- table with most records as our left table. This is generally how you should select your left table.
+
+-- Creating a master table named VB_MasterTable
+create or replace table VB_MasterTable as 
+select COM.ID,COM.Complain_Date,COM.Completion_Date,CUS.Last_Name,CUS.First_Name,
+CUS.Gender,BR.Broker_FullName,BR.COMMISSION_SCEHEME,
+CAT.DESCRIPTION_CATEGORIES,SR.Region,ST.Description_Status,REG.state,PR.Product,
+PRI.DESCRIPTION_PRORITY,SUR.Description_Source,TY.Description_Type
+from VB_complaints_data as COM 
+LEFT OUTER JOIN VB_customers as CUS on CUS.CUSTOMER_ID= COM.CUSTOMER_ID
+LEFT OUTER JOIN VB_Status_Type_History SH ON COM.ID = SH.ID
+LEFT OUTER JOIN VB_regions REG ON CUS.Region_ID = REG.ID
+LEFT OUTER JOIN VB_State_Regions SR ON REG.state_code = SR.State_Code
+LEFT OUTER JOIN VB_brokers BR ON COM.BROKER_ID = BR.BROKER_ID
+LEFT OUTER JOIN VB_categories CAT ON COM.COMPLAIN_CATEGORY_ID = CAT.ID
+LEFT OUTER JOIN VB_priorities PRI ON COM.COMPLAIN_PRIORITY_ID = PRI.ID
+LEFT OUTER JOIN VB_products PR ON COM.PRODUCT_ID = PR.PRODUCT_ID
+LEFT OUTER JOIN VB_sources SUR ON COM.COMPLAIN_SOURCE_ID = SUR.ID
+LEFT OUTER JOIN VB_statuses ST ON COM.COMPLAIN_STATUS_ID = ST.ID
+LEFT OUTER JOIN VB_types TY ON COM.COMPLAIN_TYPE_ID = TY.ID;
+
+select * from VB_MasterTable;
+
+
